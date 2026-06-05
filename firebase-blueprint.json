@@ -1,0 +1,155 @@
+{
+  "entities": {
+    "School": {
+      "title": "School",
+      "description": "General profile and subscription details for a school",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "logo": { "type": "string" },
+        "slug": { "type": "string" },
+        "subscriptionStatus": { "type": "string", "enum": ["active", "expired", "trial"] },
+        "subscriptionPlan": { "type": "string" },
+        "trialEndsAt": { "type": "string", "format": "date-time" },
+        "settings": { "type": "object" }
+      },
+      "required": ["id", "name", "slug", "subscriptionStatus"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authentication profile and registration role metadata",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "teacher", "parent"] },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "status": { "type": "string", "enum": ["waiting", "approved", "suspended"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "role", "email", "status"]
+    },
+    "Student": {
+      "title": "Student",
+      "description": "Profile data for individual pupils in a class",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "photo": { "type": "string" },
+        "classId": { "type": "string" },
+        "parentId": { "type": "string" },
+        "nationalId": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "suspended"] }
+      },
+      "required": ["id", "name", "classId", "parentId", "nationalId", "status"]
+    },
+    "ClassInfo": {
+      "title": "ClassInfo",
+      "description": "Grade divisions, assigned headmaster/teacher, and subjects list",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "grade": { "type": "string" },
+        "teacherId": { "type": "string" },
+        "studentsCount": { "type": "number" },
+        "subjects": { "type": "array" }
+      },
+      "required": ["id", "name", "grade", "teacherId"]
+    },
+    "FeeLedger": {
+      "title": "FeeLedger",
+      "description": "Account tracking of school tuition fees, due, and banking transfer receipts",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string" },
+        "totalDue": { "type": "number" },
+        "paid": { "type": "number" },
+        "due": { "type": "number" },
+        "payments": { "type": "array" }
+      },
+      "required": ["studentId", "totalDue", "paid", "due"]
+    },
+    "Complaint": {
+      "title": "Complaint",
+      "description": "Support tickets, complaints, or suggestions recorded by parents",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "parentId": { "type": "string" },
+        "parentName": { "type": "string" },
+        "category": { "type": "string", "enum": ["أكاديمي", "مالي", "سلوكي", "أخرى"] },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["new", "in_progress", "solved"] },
+        "priority": { "type": "string", "enum": ["high", "medium", "low"] },
+        "replies": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "parentId", "category", "description", "status", "priority", "createdAt"]
+    },
+    "SchoolNotification": {
+      "title": "SchoolNotification",
+      "description": "Mass notifications or single target announcements sent to parent feed",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["absence", "grade", "fee", "complaint", "general"] },
+        "title": { "type": "string" },
+        "body": { "type": "string" },
+        "targetRole": { "type": "string", "enum": ["all", "admin", "teacher", "parent"] },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "type", "title", "body", "targetRole", "read", "createdAt"]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "Direct chat sessions between admins and parent contacts",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "participants": { "type": "array" },
+        "messages": { "type": "array" },
+        "lastUpdate": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "participants", "messages", "lastUpdate"]
+    }
+  },
+  "firestore": {
+    "schools/{schoolId}": {
+      "schema": { "$ref": "School" },
+      "description": "Top-level index database holding individual schools licenses"
+    },
+    "schools/{schoolId}/users/{userId}": {
+      "schema": { "$ref": "UserProfile" },
+      "description": "Staff, teachers, admins, and parental users associated with a school"
+    },
+    "schools/{schoolId}/students/{studentId}": {
+      "schema": { "$ref": "Student" },
+      "description": "Enrolled students list assigned to parent IDs"
+    },
+    "schools/{schoolId}/classes/{classId}": {
+      "schema": { "$ref": "ClassInfo" },
+      "description": "Interactive study division sections and curriculum subjects list"
+    },
+    "schools/{schoolId}/fees/{studentId}": {
+      "schema": { "$ref": "FeeLedger" },
+      "description": "Tuition ledger, payments log, and Bank details verified by accountants"
+    },
+    "schools/{schoolId}/complaints/{complaintId}": {
+      "schema": { "$ref": "Complaint" },
+      "description": "Open direct support request or formal grievance filed by parents with answers"
+    },
+    "schools/{schoolId}/notifications/{notifId}": {
+      "schema": { "$ref": "SchoolNotification" },
+      "description": "Announcements, notifications, school circular logs broadcast to groups"
+    },
+    "schools/{schoolId}/messages/{convId}": {
+      "schema": { "$ref": "Conversation" },
+      "description": "Direct chat records exchanged with designated school parent advocates"
+    }
+  }
+}

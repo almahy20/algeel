@@ -1,0 +1,6 @@
+{
+  "name": "مدرسة الجيل الجديد",
+  "description": "نظام مدرسة الجيل الجديد - منصة متكاملة مخصصة لإدارة العمليات التعليمية، شؤون الطلاب، كادر المعلمين، وربط أولياء الأمور بالقالب المدرسي.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

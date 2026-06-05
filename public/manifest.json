@@ -1,0 +1,26 @@
+{
+  "short_name": "سكول ماستر",
+  "name": "منصة مدرسة الجيل الجديد • سكول ماستر",
+  "description": "منصة الجيل الجديد الذكية للإدارة المدرسية، المعلمين، وأولياء الأمور.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#090d1a",
+  "theme_color": "#2563eb",
+  "dir": "rtl",
+  "lang": "ar-SA",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2201/2201570.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2201/2201570.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ]
+}

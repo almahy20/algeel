@@ -1,0 +1,169 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Common Global Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserData(schoolId, userId) {
+      return get(/databases/$(database)/documents/schools/$(schoolId)/users/$(userId)).data;
+    }
+
+    function isSchoolAdmin(schoolId) {
+      return isSignedIn() && (
+        getUserData(schoolId, request.auth.uid).role == "admin" ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isSchoolTeacher(schoolId) {
+      return isSignedIn() && getUserData(schoolId, request.auth.uid).role == "teacher";
+    }
+
+    function isSchoolParent(schoolId) {
+      return isSignedIn() && getUserData(schoolId, request.auth.uid).role == "parent";
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // ----------------------------------------------------
+    // COLLECTION: Schools
+    // ----------------------------------------------------
+    match /schools/{schoolId} {
+      allow read: if isSignedIn();
+      allow write: if isSchoolAdmin(schoolId);
+
+      // ----------------------------------------------------
+      // SUBCOLLECTION: Users
+      // ----------------------------------------------------
+      match /users/{userId} {
+        allow read: if isSignedIn() && (request.auth.uid == userId || isSchoolAdmin(schoolId) || isSchoolTeacher(schoolId));
+        // Allow creating their own profile upon signing up, roles can only be approved/saved
+        allow create: if isSignedIn() && request.auth.uid == userId && isValidUserProfile(incoming());
+        allow update: if isSignedIn() && (
+          isSchoolAdmin(schoolId) || 
+          (request.auth.uid == userId && incoming().role == existing().role && incoming().status == existing().status)
+        ) && isValidUserProfile(incoming());
+        allow delete: if isSchoolAdmin(schoolId);
+      }
+
+      function isValidUserProfile(data) {
+        return data.id is string && data.id.size() <= 128 &&
+               data.name is string && data.name.size() <= 128 &&
+               data.role is string && (data.role == 'admin' || data.role == 'teacher' || data.role == 'parent') &&
+               data.email is string && data.email.size() <= 128 &&
+               data.status is string && (data.status == 'approved' || data.status == 'waiting' || data.status == 'suspended');
+      }
+
+      // ----------------------------------------------------
+      // SUBCOLLECTION: Students
+      // ----------------------------------------------------
+      match /students/{studentId} {
+        allow read: if isSignedIn() && (
+          isSchoolAdmin(schoolId) || 
+          isSchoolTeacher(schoolId) || 
+          (isSchoolParent(schoolId) && existing().parentId == request.auth.uid)
+        );
+        allow write: if isSchoolAdmin(schoolId) && isValidId(studentId);
+      }
+
+      // ----------------------------------------------------
+      // SUBCOLLECTION: Classes
+      // ----------------------------------------------------
+      match /classes/{classId} {
+        allow read: if isSignedIn();
+        allow write: if isSchoolAdmin(schoolId) && isValidId(classId);
+      }
+
+      // ----------------------------------------------------
+      // SUBCOLLECTION: Fees
+      // ----------------------------------------------------
+      match /fees/{studentId} {
+        allow read: if isSignedIn() && (
+          isSchoolAdmin(schoolId) || 
+          isSchoolTeacher(schoolId) ||
+          (isSchoolParent(schoolId) && get(/databases/$(database)/documents/schools/$(schoolId)/students/$(studentId)).data.parentId == request.auth.uid)
+        );
+        allow create: if isSchoolAdmin(schoolId);
+        // Allow parents to upload bank vouchers (updating their payments array)
+        allow update: if isSignedIn() && (
+          isSchoolAdmin(schoolId) || 
+          (isSchoolParent(schoolId) && get(/databases/$(database)/documents/schools/$(schoolId)/students/$(studentId)).data.parentId == request.auth.uid)
+        );
+        allow delete: if isSchoolAdmin(schoolId);
+      }
+
+      // ----------------------------------------------------
+      // SUBCOLLECTION: Complaints
+      // ----------------------------------------------------
+      match /complaints/{complaintId} {
+        allow read: if isSignedIn() && (
+          isSchoolAdmin(schoolId) || 
+          existing().parentId == request.auth.uid
+        );
+        allow create: if isSignedIn() && incoming().parentId == request.auth.uid && isValidComplaint(incoming());
+        allow update: if isSignedIn() && (
+          isSchoolAdmin(schoolId) || 
+          existing().parentId == request.auth.uid
+        ) && isValidComplaint(incoming());
+        allow delete: if isSchoolAdmin(schoolId);
+      }
+
+      function isValidComplaint(data) {
+        return data.id is string && data.id.size() <= 128 &&
+               data.parentId is string && data.parentId.size() <= 128 &&
+               data.category is string &&
+               data.description is string && data.description.size() <= 2000 &&
+               data.status is string && (data.status == 'new' || data.status == 'in_progress' || data.status == 'solved') &&
+               data.priority is string;
+      }
+
+      // ----------------------------------------------------
+      // SUBCOLLECTION: Notifications
+      // ----------------------------------------------------
+      match /notifications/{notifId} {
+        allow read: if isSignedIn();
+        allow write: if isSchoolAdmin(schoolId) || isSchoolTeacher(schoolId);
+      }
+
+      // ----------------------------------------------------
+      // SUBCOLLECTION: Messages (Chats)
+      // ----------------------------------------------------
+      match /messages/{convId} {
+        allow read: if isSignedIn() && (
+          isSchoolAdmin(schoolId) || 
+          existing().participants.hasAny([request.auth.uid])
+        );
+        allow write: if isSignedIn() && (
+          isSchoolAdmin(schoolId) || 
+          incoming().participants.hasAny([request.auth.uid])
+        );
+      }
+
+      // ----------------------------------------------------
+      // SUBCOLLECTION: Grades
+      // ----------------------------------------------------
+      match /grades/{examId} {
+        allow read: if isSignedIn();
+        allow write: if isSchoolAdmin(schoolId) || isSchoolTeacher(schoolId);
+      }
+    }
+  }
+}
